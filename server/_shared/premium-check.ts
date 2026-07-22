@@ -21,6 +21,12 @@ export type PremiumCallerIdentity =
  * Resolves premium status and the user-bound identity for spend controls.
  */
 export async function resolvePremiumCallerIdentity(request: Request): Promise<PremiumCallerIdentity> {
+  // Fork/local override: WM_LOCAL_UNLOCK=1 treats every caller as premium
+  // (quota-exempt) so a self-hosted instance with no auth backend can use the
+  // premium/AI handlers. Never set this in a public deployment.
+  if (process.env.WM_LOCAL_UNLOCK === '1') {
+    return { isPremium: true, userId: null, kind: 'enterprise', quotaExempt: true };
+  }
   // Internal-MCP context: trusted markers are set by the gateway AFTER an
   // HMAC verification on `X-WM-MCP-Internal` succeeds. Inbound copies of
   // these headers are stripped at the gateway entry (defense-in-depth) so

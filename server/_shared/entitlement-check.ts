@@ -132,6 +132,10 @@ const ENTITLEMENT_CACHE_TTL_SECONDS = 900;
  * Returns null if the endpoint is unrestricted (not in the map).
  */
 export function getRequiredTier(pathname: string): number | null {
+  // Fork/local override: WM_LOCAL_UNLOCK=1 treats every endpoint as unrestricted
+  // so a self-hosted instance with no Clerk/Convex auth backend can serve the
+  // premium/AI endpoints. Never set this in a public deployment.
+  if (process.env.WM_LOCAL_UNLOCK === '1') return null;
   return ENDPOINT_ENTITLEMENTS[pathname] ?? null;
 }
 
