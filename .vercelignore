@@ -24,3 +24,15 @@ target/
 # node:test suite (production env + Sentry) on every request (WORLDMONITOR-VD).
 # Guarded by tests/deploy-config.test.mjs.
 api/**/*.test.mjs
+
+# ── Fork customization: trim api/ functions under Vercel's 128-function cap ──
+# so `vercel dev` runs locally on a standard account. These endpoints aren't
+# used by the dashboard frontend. Remove lines here to re-enable an endpoint.
+
+# MCP server (lets external AI assistants query World Monitor — not the dashboard)
+api/mcp/
+
+# Payment endpoints (payments are disabled in this fork)
+api/create-checkout.ts
+api/customer-portal.ts
+api/product-catalog.js

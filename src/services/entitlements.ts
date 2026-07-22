@@ -36,6 +36,34 @@ export interface EntitlementState {
   validUntil: number;
 }
 
+/**
+ * Fork override: local self-hosted build unlocks all premium features without
+ * payment. This synthetic max-tier state is returned by all read paths below,
+ * so every panel/feature gate resolves as fully entitled. The Convex
+ * subscription machinery is left intact but its result is not gated on.
+ * To restore the original paywall behaviour, delete UNLOCKED_STATE and the
+ * short-circuits marked "Fork override" in the getters below.
+ */
+const UNLOCKED_STATE: EntitlementState = {
+  planKey: 'unlocked',
+  features: {
+    tier: 999,
+    apiAccess: true,
+    apiRateLimit: Number.MAX_SAFE_INTEGER,
+    planLimits: {
+      apiRequestsPerDay: null,
+      apiBurstRequestsPerMinute: null,
+      mcpCallsPerDay: null,
+      mcpBurstRequestsPerMinute: null,
+    },
+    maxDashboards: Number.MAX_SAFE_INTEGER,
+    prioritySupport: true,
+    exportFormats: ['json', 'csv', 'pdf', 'png', 'xlsx'],
+    mcpAccess: true,
+  },
+  validUntil: Number.MAX_SAFE_INTEGER,
+};
+
 // Module-level state
 let currentState: EntitlementState | null = null;
 const listeners = new Set<(state: EntitlementState | null) => void>();
@@ -145,23 +173,24 @@ export function onEntitlementChange(
  * Returns the current entitlement state, or null if not yet loaded.
  */
 export function getEntitlementState(): EntitlementState | null {
-  return currentState;
+  // Fork override: always report the unlocked state.
+  return UNLOCKED_STATE;
 }
 
 /**
  * Check whether a specific feature flag is truthy in the current entitlement state.
  */
 export function hasFeature(flag: keyof EntitlementState['features']): boolean {
-  if (currentState === null) return false;
-  return Boolean(currentState.features[flag]);
+  // Fork override: all features unlocked.
+  return Boolean(UNLOCKED_STATE.features[flag]);
 }
 
 /**
  * Check whether the user's tier meets or exceeds the given minimum.
  */
 export function hasTier(minTier: number): boolean {
-  if (currentState === null) return false;
-  return currentState.features.tier >= minTier;
+  // Fork override: always meets any tier requirement.
+  return UNLOCKED_STATE.features.tier >= minTier;
 }
 
 /**
@@ -169,11 +198,8 @@ export function hasTier(minTier: number): boolean {
  * Returns true if entitlement data exists, plan is not free, and hasn't expired.
  */
 export function isEntitled(): boolean {
-  return (
-    currentState !== null &&
-    currentState.planKey !== 'free' &&
-    currentState.validUntil >= Date.now()
-  );
+  // Fork override: always entitled.
+  return true;
 }
 
 /**

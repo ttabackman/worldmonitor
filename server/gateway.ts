@@ -1079,9 +1079,14 @@ export function createDomainGateway(
       || isPublicSharedRpcRequest(request.url, request.method);
     const seedRefreshVerified = await isResilienceRankingSeedRefreshRequest(request, pathname);
     const relayWarmPingVerified = await isRelayWarmPingRequest(request, pathname);
-    const requiresDirectLlmQuota = !internalMcpVerified && await shouldReserveGatewayDirectLlmQuota(request, pathname);
+    // Fork/local override: WM_LOCAL_UNLOCK=1 disables the premium quota + legacy
+    // Pro-bearer force-key so a self-hosted instance serves premium/AI endpoints
+    // without an auth backend. Pairs with getRequiredTier() -> null. Never set in
+    // a public deployment.
+    const localUnlock = process.env.WM_LOCAL_UNLOCK === '1';
+    const requiresDirectLlmQuota = !localUnlock && !internalMcpVerified && await shouldReserveGatewayDirectLlmQuota(request, pathname);
     const isTierGated = !internalMcpVerified && !isPublicNoAuthRpc && !seedRefreshVerified && !relayWarmPingVerified && getRequiredTier(pathname) !== null;
-    const needsLegacyProBearerGate = !internalMcpVerified && !isPublicNoAuthRpc && PREMIUM_RPC_PATHS.has(pathname) && !isTierGated;
+    const needsLegacyProBearerGate = !localUnlock && !internalMcpVerified && !isPublicNoAuthRpc && PREMIUM_RPC_PATHS.has(pathname) && !isTierGated;
     let endpointRateLimitPrincipalUserId: string | undefined;
 
     // Session resolution — extract userId from bearer token (Clerk JWT) if present.
